@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>bujing.yun - 惊云渡</title>
+    <style>
+        :root {
+            --primary-blue: #0984e3; /* 惊云蓝 */
+            --danger-red: #d63031;   /* 麒麟臂红 */
+            --comic-border: 3px solid #000;
+            --card-bg: #fff;
+            --bg-color: #2d3436;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            /* PC端背景：放射状漫画速度线 */
+            background-image: repeating-conic-gradient(
+                var(--bg-color) 0deg 10deg,
+                #353b48 10deg 20deg
+            );
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* 主卡片容器 */
+        .comic-card {
+            width: 100%;
+            max-width: 480px; /* 限制PC端最大宽度，模拟手机观感 */
+            background: var(--card-bg);
+            border: var(--comic-border);
+            /* PC端阴影，手机端去掉 */
+            box-shadow: 10px 10px 0 rgba(0,0,0,0.5); 
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 手机端适配：全屏铺满，去掉阴影 */
+        @media (max-width: 500px) {
+            body { align-items: flex-start; background: var(--bg-color); }
+            .comic-card {
+                max-width: 100%;
+                min-height: 100vh;
+                border: none;
+                box-shadow: none;
+            }
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            background: var(--primary-blue);
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            border-bottom: var(--comic-border);
+            position: relative;
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 900;
+            margin: 0;
+            font-style: italic;
+            text-transform: uppercase;
+            text-shadow: 3px 3px 0 #000;
+            letter-spacing: -1px;
+        }
+
+        .domain-tag {
+            background: #000;
+            color: #f1c40f;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            position: absolute;
+            bottom: -10px;
+            right: 20px;
+            transform: rotate(-5deg);
+        }
+
+        /* 核心视觉区域 (漫画格子) */
+        .viewport {
+            flex: 1; /* 占据剩余空间 */
+            min-height: 300px;
+            position: relative;
+            background: #eee;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 图片占位符 */
+        .scene {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            transition: opacity 0.1s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scene-calm { opacity: 1; background: #fff; }
+        .scene-chaos { opacity: 0; background: var(--danger-red); pointer-events: none; }
+
+        /* 使用Emoji和CSS模拟画面 (如果没有图片) */
+        .avatar { font-size: 80px; margin-bottom: 10px; transition: transform 0.2s; }
+        .dialog-box {
+            border: 3px solid #000;
+            padding: 10px 20px;
+            background: #fff;
+            border-radius: 20px;
+            font-weight: bold;
+            position: relative;
+            max-width: 80%;
+            text-align: center;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+        }
+        /* 对话框的小尾巴 */
+        .dialog-box::after {
+            content: ''; position: absolute; bottom: -15px; left: 50%;
+            border-width: 15px 15px 0; border-style: solid;
+            border-color: #000 transparent transparent;
+        }
+        .dialog-box::before {
+            content: ''; position: absolute; bottom: -9px; left: 50%; margin-left: 3px;
+            border-width: 12px 12px 0; border-style: solid;
+            border-color: #fff transparent transparent;
+            z-index: 1;
+        }
+
+        /* 鬼畜模式的特效 */
+        .speed-lines {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(90deg, transparent 0, transparent 50px, rgba(255,255,255,0.2) 50px, rgba(255,255,255,0.2) 100px);
+            z-index: 1;
+            display: none;
+        }
+
+        .chaos-text {
+            font-size: 3rem; color: yellow; text-shadow: 4px 4px 0 red;
+            font-family: impact, sans-serif;
+            transform: rotate(-10deg);
+            z-index: 2;
+        }
+
+        /* 控制区域 */
+        .controls {
+            padding: 20px;
+            background: #fff;
+            border-top: var(--comic-border);
+            z-index: 10;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            background: var(--danger-red);
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0 #000;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-transform: uppercase;
+        }
+
+        .btn-main:active {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 #000;
+        }
+
+        /* 简单的弹幕轨道 */
+        .danmaku-track {
+            height: 30px;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            white-space: nowrap;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .danmaku-content {
+            display: inline-block;
+            animation: scroll-left 10s linear infinite;
+            padding-left: 100%; /* 初始位置在右侧外面 */
+        }
+
+        /* 动画定义 */
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        @keyframes shake-hard {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-3px, -2px) rotate(-5deg); }
+            20% { transform: translate(-6px, 0px) rotate(5deg); }
+            30% { transform: translate(6px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(5deg); }
+            50% { transform: translate(-1px, 2px) rotate(-5deg); }
+            60% { transform: translate(-6px, 1px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        /* 激活状态类 */
+        .is-triggered .scene-calm { opacity: 0; }
+        .is-triggered .scene-chaos { opacity: 1; }
+        .is-triggered .comic-card { animation: shake-hard 0.3s infinite; }
+        .is-triggered .speed-lines { display: block; }
+        .is-triggered .avatar { transform: scale(1.5); }
+    </style>
+</head>
+<body>
+
+    <div class="comic-card" id="card">
+        <div class="header">
+            <h1 class="title">BUJING.YUN</h1>
+            <div class="domain-tag">.yun 官方认证</div>
+        </div>
+
+        <div class="danmaku-track">
+            <div class="danmaku-content">
+                ☁️ 这里的云不存数据，只存排云掌 | 🗡️ 绝世好剑 9.9包邮 | 😭 孔慈！！！ | 🛑 禁止在服务器机房大喊大叫 | 👉 域名不错，借我用两天
+            </div>
+        </div>
+
+        <div class="viewport">
+            <div class="scene scene-calm">
+                <div class="avatar">☁️👨🏻‍🦱</div> <div class="dialog-box" id="calmText">
+                    你来这里做什么？
+                </div>
+            </div>
+
+            <div class="scene scene-chaos">
+                <div class="speed-lines"></div>
+                <div class="avatar">🤬💢</div> <div class="chaos-text">
+                    不要过来啊!!
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-main" id="actionBtn" onclick="toggleMeme()">
+                👉 靠近一步
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const card = document.getElementById('card');
+        const btn = document.getElementById('actionBtn');
+        let active = false;
+
+        function toggleMeme() {
+            active = !active;
+            
+            if (active) {
+                // 开启高能模式
+                card.classList.add('is-triggered');
+                btn.innerText = "🛑 我这就走！！";
+                btn.style.background = "#2d3436";
+                
+                // 手机端震动反馈 (如果设备支持)
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100, 50, 200]);
+                }
+            } else {
+                // 恢复冷静
+                card.classList.remove('is-triggered');
+                btn.innerText = "👉 再次试探";
+                btn.style.background = "#d63031"; // 恢复红色
+            }
+        }
+    </script>
+</body>
+</html>
